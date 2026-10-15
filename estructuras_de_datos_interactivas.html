@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador Interactivo de Estructuras de Datos</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfeff',
+              100: '#cffaff',
+              400: '#22d3ee',
+              500: '#06b6d4',
+              600: '#0891b2',
+              900: '#164e63',
+            },
+            accent: {
+              purple: '#a855f7',
+              pink: '#ec4899',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            }
+          },
+          animation: {
+            'pulse-glow': 'pulseGlow 2s infinite',
+            'bounce-subtle': 'bounceSubtle 1.5s infinite',
+          },
+          keyframes: {
+            pulseGlow: {
+              '0%, 100%': { boxShadow: '0 0 15px rgba(6, 182, 212, 0.4)' },
+              '50%': { boxShadow: '0 0 25px rgba(6, 182, 212, 0.8)' },
+            },
+            bounceSubtle: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-5px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos personalizados para Glassmorphism y scrollbars */
+    body {
+      background-color: #0b0f17;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card-hover:hover {
+      transform: translateY(-3px);
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 10px 30px -10px rgba(6, 182, 212, 0.2);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #06b6d4;
+    }
+
+    /* Code Highlighting */
+    .code-line {
+      transition: background-color 0.2s ease, border-left-color 0.2s ease;
+      border-left: 3px solid transparent;
+      padding-left: 0.75rem;
+    }
+    .code-line.active {
+      background-color: rgba(6, 182, 212, 0.15);
+      border-left-color: #06b6d4;
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* Tree & Graph SVG Styling */
+    .svg-node {
+      transition: all 0.4s ease;
+      cursor: pointer;
+    }
+    .svg-edge {
+      transition: stroke 0.4s ease, stroke-width 0.4s ease;
+    }
+
+    /* Node highlight states */
+    .node-highlight {
+      filter: drop-shadow(0 0 8px #06b6d4);
+      stroke: #06b6d4 !important;
+      stroke-width: 3px !important;
+    }
+    .node-active {
+      filter: drop-shadow(0 0 12px #f59e0b);
+      stroke: #f59e0b !important;
+      fill: #78350f !important;
+    }
+    .node-visited {
+      filter: drop-shadow(0 0 10px #a855f7);
+      stroke: #a855f7 !important;
+      fill: #581c87 !important;
+    }
+    .node-target {
+      filter: drop-shadow(0 0 12px #10b981);
+      stroke: #10b981 !important;
+      fill: #064e3b !important;
+    }
+
+    /* Transitions for items in stack/queue */
+    .data-item {
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-900">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-50 glass-card border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo & Title -->
+      <div class="flex items-center gap-3 cursor-pointer" id="logo-btn">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-200 to-purple-400">
+            DataStruct<span class="text-cyan-400">Lab</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Aprende Estructuras de Datos de Forma Visual</p>
+        </div>
+      </div>
+
+      <!-- Navigation & Controls -->
+      <div class="flex items-center gap-3">
+        <!-- Back to Menu button (Hidden in Dashboard) -->
+        <button id="btn-back-menu" class="hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          <span class="hidden md:inline">Menú Principal</span>
+        </button>
+
+        <!-- Toggle Switch for "Ver código paso a paso" -->
+        <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-1.5">
+          <span class="text-xs font-medium text-slate-300 hidden sm:inline">Ver Código Paso a Paso:</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="toggle-code-panel" class="sr-only peer" checked>
+            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+
+    <!-- ==================== VIEW 1: MENU / DASHBOARD ==================== -->
+    <section id="view-dashboard" class="space-y-8 animate-fadeIn">
+      <!-- Hero Banner -->
+      <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden border border-slate-800/80 bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-cyan-950/30">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-10 -top-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="max-w-2xl relative z-10 space-y-3">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            Interactive Learning Suite
+          </span>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Explora las Estructuras de Datos
+          </h2>
+          <p class="text-slate-400 text-sm sm:text-base leading-relaxed">
+            Visualiza paso a paso cómo funcionan las estructuras de datos lineales y no lineales con animaciones interactivas, ejecución de código en tiempo real y análisis de complejidad Big-O.
+          </p>
+        </div>
+      </div>
+
+      <!-- Category 1: Lineal Data Structures -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+          <div class="w-3 h-3 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400"></div>
+          <h3 class="text-lg font-bold text-slate-200 tracking-wide">Estructuras Lineales</h3>
+          <span class="text-xs text-slate-500 ml-2">(Elementos dispuesta secuencialmente)</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Card: Pila (Stack) -->
+          <div class="glass-card glass-card-hover rounded-xl p-5 flex flex-col justify-between cursor-pointer group" onclick="app.selectDS('stack')">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+              </div>
+              <h4 class="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">Pilas (Stacks)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Estructura LIFO (Last In, First Out). El último elemento en entrar es el primero en salir.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <span class="font-mono text-cyan-400">Push / Pop / Peek</span>
+              <span class="text-cyan-400 group-hover:translate-x-1 transition-transform">Probar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card: Cola (Queue) -->
+          <div class="glass-card glass-card-hover rounded-xl p-5 flex flex-col justify-between cursor-pointer group" onclick="app.selectDS('queue')">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+              <h4 class="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">Colas (Queues)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Estructura FIFO (First In, First Out). El primer elemento en entrar es el primero en salir.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <span class="font-mono text-indigo-400">Enqueue / Dequeue</span>
+              <span class="text-indigo-400 group-hover:translate-x-1 transition-transform">Probar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card: Lista Enlazada (Linked List) -->
+          <div class="glass-card glass-card-hover rounded-xl p-5 flex flex-col justify-between cursor-pointer group" onclick="app.selectDS('linkedlist')">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+              </div>
+              <h4 class="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">Listas Enlazadas</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Nodos encadenados dinámicamente en memoria mediante punteros `next`.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <span class="font-mono text-emerald-400">Insert / Delete / Search</span>
+              <span class="text-emerald-400 group-hover:translate-x-1 transition-transform">Probar &rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category 2: Non-Linear Data Structures -->
+      <div class="space-y-4 pt-4">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+          <div class="w-3 h-3 rounded-full bg-purple-400 shadow-sm shadow-purple-400"></div>
+          <h3 class="text-lg font-bold text-slate-200 tracking-wide">Estructuras No Lineales</h3>
+          <span class="text-xs text-slate-500 ml-2">(Relaciones jerárquicas o en red)</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Card: Árbol Binario de Búsqueda (BST) -->
+          <div class="glass-card glass-card-hover rounded-xl p-5 flex flex-col justify-between cursor-pointer group" onclick="app.selectDS('bst')">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M12 4.354a4 4 0 100 5.292M12 4.354v15.3M6 11l-3 4m0 0l3 4m-3-4h18m-3-4l3 4m0 0l-3 4"></path>
+                </svg>
+              </div>
+              <h4 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Árbol Binario de Búsqueda (BST)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Jerarquía con propiedad de orden: menores a la izquierda, mayores a la derecha. Recorridos Inorden, Preorden, Postorden y BFS.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <span class="font-mono text-purple-400">Insert / Search / Traversals</span>
+              <span class="text-purple-400 group-hover:translate-x-1 transition-transform">Probar &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card: Grafos (Graphs) -->
+          <div class="glass-card glass-card-hover rounded-xl p-5 flex flex-col justify-between cursor-pointer group" onclick="app.selectDS('graph')">
+            <div class="space-y-3">
+              <div class="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2V4zm-6 8a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zm12 0a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1zM7 18a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2v-1z"></path>
+                </svg>
+              </div>
+              <h4 class="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">Grafos (Graphs)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Conjunto de vértices conectados por aristas. Simula redes sociales y mapas con recorridos BFS y DFS.
+              </p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+              <span class="font-mono text-amber-400">BFS / DFS / Vértices</span>
+              <span class="text-amber-400 group-hover:translate-x-1 transition-transform">Probar &rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: INTERACTIVE VISUALIZER ==================== -->
+    <section id="view-visualizer" class="hidden flex-1 flex flex-col gap-6">
+
+      <!-- Header section of active DS -->
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="ds-category-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              Lineal
+            </span>
+            <h2 id="ds-title" class="text-2xl font-bold text-white">Pilas (Stack)</h2>
+          </div>
+          <p id="ds-subtitle" class="text-xs text-slate-400 mt-0.5">Operaciones LIFO (Last In, First Out)</p>
+        </div>
+
+        <!-- Quick DS Switcher Dropdown -->
+        <div class="flex items-center gap-2">
+          <label for="ds-select-dropdown" class="text-xs text-slate-400 font-medium">Cambiar a:</label>
+          <select id="ds-select-dropdown" class="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-cyan-500">
+            <option value="stack">Pila (Stack)</option>
+            <option value="queue">Cola (Queue)</option>
+            <option value="linkedlist">Lista Enlazada</option>
+            <option value="bst">Árbol Binario (BST)</option>
+            <option value="graph">Grafo (Graph)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Main Workspace Grid: Split Visualizer & Code Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+        
+        <!-- Left / Top Column: Controls & Animation Canvas (Cols 1 to 7/12) -->
+        <div id="col-visualizer" class="lg:col-span-7 flex flex-col gap-4">
+
+          <!-- Interactive Action Controls Box -->
+          <div class="glass-card rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Panel de Control</span>
+              <span id="action-status-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                Listo
+              </span>
+            </div>
+
+            <!-- Dynamic Operations Controls injected by JS -->
+            <div id="ds-controls-container" class="flex flex-wrap items-center gap-2">
+              <!-- Controls like Push input, Pop button, Enqueue, Dequeue etc. rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Visualizer Display Box -->
+          <div class="glass-card rounded-xl p-4 sm:p-6 min-h-[380px] flex flex-col justify-between relative overflow-hidden bg-slate-950/60 border border-slate-800">
+            
+            <!-- Canvas / Node Rendering Container -->
+            <div id="visualizer-canvas" class="flex-1 flex items-center justify-center relative min-h-[280px]">
+              <!-- Visualized items rendered here -->
+            </div>
+
+            <!-- Live Explanation Bar -->
+            <div class="mt-4 p-3 rounded-lg bg-slate-900/90 border border-slate-800/80 flex items-start gap-3">
+              <div class="p-1 rounded bg-cyan-500/10 text-cyan-400 mt-0.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Paso Actual</span>
+                <p id="explanation-text" class="text-xs text-slate-200 font-mono">Selecciona una operación para comenzar la animación.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Animation Playback Controls -->
+          <div class="glass-card rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Buttons Play/Pause/Step/Reset -->
+            <div class="flex items-center gap-2">
+              <button id="btn-reset" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 border border-slate-700 transition" title="Reiniciar animación">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+              <button id="btn-prev-step" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Paso Anterior">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              <button id="btn-play-pause" class="px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow-md shadow-cyan-500/20">
+                <svg id="icon-play" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg id="icon-pause" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+                <span id="label-play-pause">Reproducir</span>
+              </button>
+              <button id="btn-next-step" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Paso Siguiente">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Speed Control Slider -->
+            <div class="flex items-center gap-2 flex-1 max-w-[200px]">
+              <span class="text-[11px] font-medium text-slate-400">Velocidad:</span>
+              <input type="range" id="speed-slider" min="200" max="1800" step="100" value="800" class="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right / Bottom Column: Code Step Panel & Theory (Cols 8 to 12) -->
+        <div id="col-code-theory" class="lg:col-span-5 flex flex-col gap-4">
+
+          <!-- Code Execution Step Panel -->
+          <div id="code-panel-card" class="glass-card rounded-xl p-4 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div class="flex items-center gap-2">
+                <div class="flex space-x-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                </div>
+                <span id="code-panel-filename" class="text-xs font-mono text-slate-400 ml-2">stack.js</span>
+              </div>
+              <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400">
+                Paso a Paso
+              </span>
+            </div>
+
+            <!-- Code lines container -->
+            <div id="code-container" class="font-mono text-xs bg-slate-950 p-3 rounded-lg overflow-x-auto space-y-1 text-slate-300 border border-slate-900 leading-relaxed max-h-[260px]">
+              <!-- Code lines rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Educational Theory & Big-O Card -->
+          <div class="glass-card rounded-xl p-5 space-y-4">
+            <div class="border-b border-slate-800 pb-2 flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                Teoría & Complejidad
+              </h3>
+              <span class="text-xs font-mono text-cyan-400">Big-O Notation</span>
+            </div>
+
+            <!-- Concept Text -->
+            <p id="theory-description" class="text-xs text-slate-300 leading-relaxed">
+              Las pilas son colecciones lineales basadas en el principio LIFO.
+            </p>
+
+            <!-- Big-O Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400">
+                    <th class="py-1.5 font-medium">Operación</th>
+                    <th class="py-1.5 font-medium">Promedio</th>
+                    <th class="py-1.5 font-medium">Peor Caso</th>
+                  </tr>
+                </thead>
+                <tbody id="big-o-table-body" class="divide-y divide-slate-800/50 text-slate-300 font-mono">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Common Use Cases -->
+            <div class="pt-2">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Casos de Uso Comunes:</span>
+              <ul id="use-cases-list" class="list-disc list-inside text-xs text-slate-400 space-y-0.5">
+                <!-- Injected via JS -->
+              </ul>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="mt-auto border-t border-slate-800/80 bg-slate-950/80 py-4 px-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>Plataforma Educativa de Estructuras de Datos © 2026</p>
+      <div class="flex gap-4">
+        <span class="hover:text-slate-300 transition cursor-pointer" onclick="app.showDashboard()">Inicio</span>
+        <span class="text-slate-700">|</span>
+        <span class="text-cyan-400">Pilas • Colas • Listas • Árboles • Grafos</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- APPLICATION LOGIC IN VANILLA JAVASCRIPT -->
+  <script>
+    /**
+     * DataStructLab Main Interactive Application
+     */
+    class DataStructLab {
+      constructor() {
+        this.currentDS = 'stack';
+        this.codeVisible = true;
+        
+        // Data Structures States
+        this.state = {
+          stack: [12, 45, 78],
+          queue: [15, 30, 45],
+          linkedlist: [10, 20, 30, 40],
+          bst: null, // Binary Tree Root
+          graph: {
+            nodes: ['A', 'B', 'C', 'D', 'E', 'F'],
+            edges: [
+              ['A', 'B'], ['A', 'C'], ['B', 'D'], ['C', 'E'], ['D', 'F'], ['E', 'F']
+            ]
+          }
+        };
+
+        // Initialize BST sample
+        this.initDefaultBST();
+
+        // Step-by-Step Execution Engine
+        this.steps = [];
+        this.currentStepIndex = -1;
+        this.isPlaying = false;
+        this.timer = null;
+        this.speed = 1000; // ms
+
+        this.initDOM();
+        this.bindEvents();
+        this.renderCurrentDS();
+      }
+
+      initDefaultBST() {
+        // Pre-fill binary search tree
+        this.state.bst = {
+          val: 50,
+          left: {
+            val: 30,
+            left: { val: 20, left: null, right: null },
+            right: { val: 40, left: null, right: null }
+          },
+          right: {
+            val: 70,
+            left: { val: 60, left: null, right: null },
+            right: { val: 80, left: null, right: null }
+          }
+        };
+      }
+
+      initDOM() {
+        this.dom = {
+          viewDashboard: document.getElementById('view-dashboard'),
+          viewVisualizer: document.getElementById('view-visualizer'),
+          btnBackMenu: document.getElementById('btn-back-menu'),
+          logoBtn: document.getElementById('logo-btn'),
+          toggleCodePanel: document.getElementById('toggle-code-panel'),
+          colCodeTheory: document.getElementById('col-code-theory'),
+          colVisualizer: document.getElementById('col-visualizer'),
+          codePanelCard: document.getElementById('code-panel-card'),
+          
+          dsTitle: document.getElementById('ds-title'),
+          dsSubtitle: document.getElementById('ds-subtitle'),
+          dsCategoryBadge: document.getElementById('ds-category-badge'),
+          dsDropdown: document.getElementById('ds-select-dropdown'),
+          
+          controlsContainer: document.getElementById('ds-controls-container'),
+          visualizerCanvas: document.getElementById('visualizer-canvas'),
+          explanationText: document.getElementById('explanation-text'),
+          actionStatusBadge: document.getElementById('action-status-badge'),
+          
+          btnReset: document.getElementById('btn-reset'),
+          btnPrevStep: document.getElementById('btn-prev-step'),
+          btnPlayPause: document.getElementById('btn-play-pause'),
+          btnNextStep: document.getElementById('btn-next-step'),
+          labelPlayPause: document.getElementById('label-play-pause'),
+          iconPlay: document.getElementById('icon-play'),
+          iconPause: document.getElementById('icon-pause'),
+          speedSlider: document.getElementById('speed-slider'),
+          
+          codeContainer: document.getElementById('code-container'),
+          codeFilename: document.getElementById('code-panel-filename'),
+          theoryDescription: document.getElementById('theory-description'),
+          bigOTableBody: document.getElementById('big-o-table-body'),
+          useCasesList: document.getElementById('use-cases-list')
+        };
+      }
+
+      bindEvents() {
+        // Logo & Back to Menu
+        this.dom.logoBtn.addEventListener('click', () => this.showDashboard());
+        this.dom.btnBackMenu.addEventListener('click', () => this.showDashboard());
+
+        // Toggle code panel visibility switch
+        this.dom.toggleCodePanel.addEventListener('change', (e) => {
+          this.codeVisible = e.target.checked;
+          if (this.codeVisible) {
+            this.dom.codePanelCard.classList.remove('hidden');
+          } else {
+            this.dom.codePanelCard.classList.add('hidden');
+          }
+        });
+
+        // Dropdown DS switcher
+        this.dom.dsDropdown.addEventListener('change', (e) => {
+          this.selectDS(e.target.value);
+        });
+
+        // Animation Playback Buttons
+        this.dom.btnPlayPause.addEventListener('click', () => this.togglePlayPause());
+        this.dom.btnNextStep.addEventListener('click', () => this.stepNext());
+        this.dom.btnPrevStep.addEventListener('click', () => this.stepPrev());
+        this.dom.btnReset.addEventListener('click', () => this.resetAnimation());
+
+        // Speed slider
+        this.dom.speedSlider.addEventListener('input', (e) => {
+          // Slider value: 200 (fast) to 1800 (slow) -> reverse for speed calculation
+          this.speed = 2000 - parseInt(e.target.value);
+          if (this.isPlaying) {
+            this.pause();
+            this.play();
+          }
+        });
+      }
+
+      showDashboard() {
+        this.pause();
+        this.dom.viewDashboard.classList.remove('hidden');
+        this.dom.viewVisualizer.classList.add('hidden');
+        this.dom.btnBackMenu.classList.add('hidden');
+      }
+
+      selectDS(dsKey) {
+        this.pause();
+        this.currentDS = dsKey;
+        this.dom.dsDropdown.value = dsKey;
+        
+        this.dom.viewDashboard.classList.add('hidden');
+        this.dom.viewVisualizer.classList.remove('hidden');
+        this.dom.btnBackMenu.classList.remove('hidden');
+
+        this.renderCurrentDS();
+      }
+
+      renderCurrentDS() {
+        this.pause();
+        this.steps = [];
+        this.currentStepIndex = -1;
+
+        const dsInfo = this.getDSMetadata(this.currentDS);
+        this.dom.dsTitle.innerText = dsInfo.title;
+        this.dom.dsSubtitle.innerText = dsInfo.subtitle;
+        this.dom.dsCategoryBadge.innerText = dsInfo.category;
+        this.dom.codeFilename.innerText = dsInfo.filename;
+
+        // Render Theory & Big-O
+        this.dom.theoryDescription.innerText = dsInfo.theory;
+        this.renderBigOTable(dsInfo.bigO);
+        this.renderUseCases(dsInfo.useCases);
+
+        // Render Action Controls & Canvas
+        this.renderControls();
+        this.renderCanvasInitial();
+
+        // Render Initial Code Snippet
+        this.renderCodeSnippet(dsInfo.defaultCode, -1);
+        this.dom.explanationText.innerText = "Selecciona una operación arriba para iniciar el recorrido de animación.";
+        this.dom.actionStatusBadge.innerText = "Listo";
+      }
+
+      // Metadata for each DS
+      getDSMetadata(dsKey) {
+        const data = {
+          stack: {
+            title: 'Pilas (Stack)',
+            subtitle: 'Estructura LIFO (Last In, First Out)',
+            category: 'Lineal',
+            filename: 'pila.js',
+            theory: 'Una Pila es una estructura de datos lineal donde los elementos se añaden y eliminan únicamente por un extremo llamado TOP (Cima). Sigue el principio LIFO.',
+            bigO: [
+              { op: 'Push (Insertar)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Pop (Eliminar)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Peek (Cima)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Búsqueda', avg: 'O(n)', worst: 'O(n)' }
+            ],
+            useCases: ['Pila de llamadas a funciones (Call Stack)', 'Deshacer / Rehacer (Undo/Redo)', 'Evaluación de sintaxis y paréntesis'],
+            defaultCode: [
+              { line: 1, code: 'function push(pila, valor) {' },
+              { line: 2, code: '  if (pila.length >= CAPACIDAD_MAX) {' },
+              { line: 3, code: '    throw new Error("Stack Overflow");' },
+              { line: 4, code: '  }' },
+              { line: 5, code: '  pila.push(valor); // Elemento entra en TOP' },
+              { line: 6, code: '  top = pila.length - 1;' },
+              { line: 7, code: '  return pila;' },
+              { line: 8, code: '}' }
+            ]
+          },
+          queue: {
+            title: 'Colas (Queue)',
+            subtitle: 'Estructura FIFO (First In, First Out)',
+            category: 'Lineal',
+            filename: 'cola.js',
+            theory: 'Una Cola es una estructura de datos lineal donde los elementos se insertan por el final (REAR) y se eliminan por el frente (FRONT). Sigue el principio FIFO.',
+            bigO: [
+              { op: 'Enqueue (Insertar)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Dequeue (Eliminar)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Peek (Frente)', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Búsqueda', avg: 'O(n)', worst: 'O(n)' }
+            ],
+            useCases: ['Colas de impresión de documentos', 'Atención de peticiones en servidores', 'Algoritmos de búsqueda BFS en grafos'],
+            defaultCode: [
+              { line: 1, code: 'function enqueue(cola, valor) {' },
+              { line: 2, code: '  if (cola.length >= MAX) return "Cola Llena";' },
+              { line: 3, code: '  cola.push(valor); // Añadir a REAR' },
+              { line: 4, code: '  rear = cola.length - 1;' },
+              { line: 5, code: '  return cola;' },
+              { line: 6, code: '}' }
+            ]
+          },
+          linkedlist: {
+            title: 'Listas Enlazadas (Linked List)',
+            subtitle: 'Secuencia dinámicamente conectada por punteros',
+            category: 'Lineal',
+            filename: 'lista_enlazada.js',
+            theory: 'Colección de nodos secuenciales donde cada nodo contiene un valor de datos y una referencia o puntero (`next`) a la ubicación del siguiente nodo.',
+            bigO: [
+              { op: 'Insertar al inicio', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Eliminar del inicio', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Búsqueda de valor', avg: 'O(n)', worst: 'O(n)' },
+              { op: 'Acceso por índice', avg: 'O(n)', worst: 'O(n)' }
+            ],
+            useCases: ['Asignación dinámica de memoria', 'Navegación de historial atrás/adelante', 'Implementación de listas sin tamaño fijo'],
+            defaultCode: [
+              { line: 1, code: 'function buscar(cabeza, valorTarget) {' },
+              { line: 2, code: '  let actual = cabeza;' },
+              { line: 3, code: '  while (actual !== null) {' },
+              { line: 4, code: '    if (actual.valor === valorTarget) return true;' },
+              { line: 5, code: '    actual = actual.siguiente;' },
+              { line: 6, code: '  }' },
+              { line: 7, code: '  return false;' },
+              { line: 8, code: '}' }
+            ]
+          },
+          bst: {
+            title: 'Árbol Binario de Búsqueda (BST)',
+            subtitle: 'Estructura jerárquica con ordenamiento de subárboles',
+            category: 'No Lineal',
+            filename: 'arbol_bst.js',
+            theory: 'Árbol donde cada nodo tiene máximo 2 hijos. Para todo nodo, sus descendientes izquierdos son estrictamente menores y sus descendientes derechos son mayores.',
+            bigO: [
+              { op: 'Búsqueda', avg: 'O(log n)', worst: 'O(n)' },
+              { op: 'Inserción', avg: 'O(log n)', worst: 'O(n)' },
+              { op: 'Eliminación', avg: 'O(log n)', worst: 'O(n)' },
+              { op: 'Recorrido Completo', avg: 'O(n)', worst: 'O(n)' }
+            ],
+            useCases: ['Índices de bases de datos relacionales', 'Jerarquías de carpetas de archivos', 'Tablas de búsqueda con orden mantensible'],
+            defaultCode: [
+              { line: 1, code: 'function insertar(nodo, valor) {' },
+              { line: 2, code: '  if (nodo === null) return new Nodo(valor);' },
+              { line: 3, code: '  if (valor < nodo.valor) {' },
+              { line: 4, code: '    nodo.izq = insertar(nodo.izq, valor);' },
+              { line: 5, code: '  } else if (valor > nodo.valor) {' },
+              { line: 6, code: '    nodo.der = insertar(nodo.der, valor);' },
+              { line: 7, code: '  }' },
+              { line: 8, code: '  return nodo;' },
+              { line: 9, code: '}' }
+            ]
+          },
+          graph: {
+            title: 'Grafos (Graphs)',
+            subtitle: 'Red de nodos (vértices) conectados por aristas',
+            category: 'No Lineal',
+            filename: 'grafo_bfs_dfs.js',
+            theory: 'Estructura no lineal compuesta por un conjunto de Vértices (Nodos) y Aristas (Enlaces) que modelan relaciones complejas de red muchos-a-muchos.',
+            bigO: [
+              { op: 'Recorrido BFS', avg: 'O(V + E)', worst: 'O(V + E)' },
+              { op: 'Recorrido DFS', avg: 'O(V + E)', worst: 'O(V + E)' },
+              { op: 'Insertar Vértice', avg: 'O(1)', worst: 'O(1)' },
+              { op: 'Insertar Arista', avg: 'O(1)', worst: 'O(1)' }
+            ],
+            useCases: ['Redes sociales y conexiones de usuarios', 'Sistemas de GPS y mapas (Ruta más corta)', 'Motores de recomendación de contenidos'],
+            defaultCode: [
+              { line: 1, code: 'function bfs(inicio) {' },
+              { line: 2, code: '  const cola = [inicio];' },
+              { line: 3, code: '  const visitados = new Set([inicio]);' },
+              { line: 4, code: '  while (cola.length > 0) {' },
+              { line: 5, code: '    const actual = cola.shift();' },
+              { line: 6, code: '    for (let vecino of adj[actual]) {' },
+              { line: 7, code: '      if (!visitados.has(vecino)) {' },
+              { line: 8, code: '        visitados.add(vecino); cola.push(vecino);' },
+              { line: 9, code: '      }' },
+              { line: 10, code: '    }' },
+              { line: 11, code: '  }' },
+              { line: 12, code: '}' }
+            ]
+          }
+        };
+        return data[dsKey];
+      }
+
+      renderBigOTable(bigOItems) {
+        this.dom.bigOTableBody.innerHTML = bigOItems.map(item => `
+          <tr class="hover:bg-slate-800/30">
+            <td class="py-1.5 text-slate-300 font-sans">${item.op}</td>
+            <td class="py-1.5 text-emerald-400 font-semibold">${item.avg}</td>
+            <td class="py-1.5 text-amber-400 font-semibold">${item.worst}</td>
+          </tr>
+        `).join('');
+      }
+
+      renderUseCases(useCases) {
+        this.dom.useCasesList.innerHTML = useCases.map(uc => `
+          <li class="hover:text-slate-200 transition">${uc}</li>
+        `).join('');
+      }
+
+      renderCodeSnippet(linesArray, activeLineNumber = -1) {
+        this.dom.codeContainer.innerHTML = linesArray.map(item => {
+          const isActive = item.line === activeLineNumber;
+          return `
+            <div id="code-line-${item.line}" class="code-line ${isActive ? 'active' : ''} flex items-center gap-3">
+              <span class="text-slate-600 select-none w-5 text-right font-mono text-[10px]">${item.line}</span>
+              <pre class="font-mono">${this.escapeHTML(item.code)}</pre>
+            </div>
+          `;
+        }).join('');
+      }
+
+      escapeHTML(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      /* ----------------------------------------------------
+       *  DYNAMIC RENDER CONTROLS
+       * ---------------------------------------------------- */
+      renderControls() {
+        const container = this.dom.controlsContainer;
+        container.innerHTML = '';
+
+        if (this.currentDS === 'stack') {
+          container.innerHTML = `
+            <div class="flex items-center gap-2">
+              <input type="number" id="input-val" placeholder="Valor" value="${Math.floor(Math.random()*89)+10}" class="w-20 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:border-cyan-500 focus:outline-none">
+              <button onclick="app.actionStackPush()" class="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs rounded-lg transition shadow-sm shadow-cyan-500/20">
+                Push (Insertar)
+              </button>
+            </div>
+            <button onclick="app.actionStackPop()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Pop (Eliminar)
+            </button>
+            <button onclick="app.actionStackPeek()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Peek (Ver Cima)
+            </button>
+          `;
+        } else if (this.currentDS === 'queue') {
+          container.innerHTML = `
+            <div class="flex items-center gap-2">
+              <input type="number" id="input-val" placeholder="Valor" value="${Math.floor(Math.random()*89)+10}" class="w-20 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:border-cyan-500 focus:outline-none">
+              <button onclick="app.actionQueueEnqueue()" class="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold text-xs rounded-lg transition shadow-sm">
+                Enqueue (Encolar)
+              </button>
+            </div>
+            <button onclick="app.actionQueueDequeue()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Dequeue (Desencolar)
+            </button>
+            <button onclick="app.actionQueuePeek()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Peek (Ver Frente)
+            </button>
+          `;
+        } else if (this.currentDS === 'linkedlist') {
+          container.innerHTML = `
+            <div class="flex items-center gap-2">
+              <input type="number" id="input-val" placeholder="Valor" value="${Math.floor(Math.random()*89)+10}" class="w-20 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:border-cyan-500 focus:outline-none">
+              <button onclick="app.actionLLInsertHead()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs rounded-lg transition">
+                Insertar Inicio
+              </button>
+            </div>
+            <button onclick="app.actionLLSearch()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Buscar Valor
+            </button>
+            <button onclick="app.actionLLDelete()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 font-semibold text-xs rounded-lg transition">
+              Eliminar Cabeza
+            </button>
+          `;
+        } else if (this.currentDS === 'bst') {
+          container.innerHTML = `
+            <div class="flex items-center gap-2">
+              <input type="number" id="input-val" placeholder="Valor" value="${Math.floor(Math.random()*89)+10}" class="w-20 bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:border-cyan-500 focus:outline-none">
+              <button onclick="app.actionBSTInsert()" class="px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white font-semibold text-xs rounded-lg transition">
+                Insertar Nodo
+              </button>
+              <button onclick="app.actionBSTSearch()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 font-semibold text-xs rounded-lg transition">
+                Buscar
+              </button>
+            </div>
+            <div class="flex items-center gap-1 border-l border-slate-800 pl-2">
+              <button onclick="app.actionBSTTraversal('inorder')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded">Inorden</button>
+              <button onclick="app.actionBSTTraversal('preorder')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded">Preorden</button>
+              <button onclick="app.actionBSTTraversal('postorder')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded">Postorden</button>
+            </div>
+          `;
+        } else if (this.currentDS === 'graph') {
+          container.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 font-medium">Origen:</span>
+              <select id="select-graph-start" class="bg-slate-900 border border-slate-700 text-xs text-white rounded-lg px-2 py-1.5">
+                ${this.state.graph.nodes.map(n => `<option value="${n}">${n}</option>`).join('')}
+              </select>
+              <button onclick="app.actionGraphBFS()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition">
+                Recorrido BFS
+              </button>
+              <button onclick="app.actionGraphDFS()" class="px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs rounded-lg transition">
+                Recorrido DFS
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      /* ----------------------------------------------------
+       *  CANVAS INITIAL RENDERING
+       * ---------------------------------------------------- */
+      renderCanvasInitial() {
+        const canvas = this.dom.visualizerCanvas;
+        canvas.innerHTML = '';
+
+        if (this.currentDS === 'stack') {
+          this.renderStackCanvas();
+        } else if (this.currentDS === 'queue') {
+          this.renderQueueCanvas();
+        } else if (this.currentDS === 'linkedlist') {
+          this.renderLinkedListCanvas();
+        } else if (this.currentDS === 'bst') {
+          this.renderBSTCanvas();
+        } else if (this.currentDS === 'graph') {
+          this.renderGraphCanvas();
+        }
+      }
+
+      // STACK CANVAS (Vertical Container)
+      renderStackCanvas(highlightIndex = -1, peekIndex = -1) {
+        const items = this.state.stack;
+        const canvas = this.dom.visualizerCanvas;
+        
+        let html = `
+          <div class="flex flex-col items-center justify-end w-full max-w-[280px] h-[300px] border-b-4 border-x-4 border-cyan-500/40 rounded-b-xl bg-slate-900/40 p-3 relative space-y-2">
+            <div class="absolute -left-16 top-2 flex items-center gap-1 text-cyan-400 text-xs font-mono font-bold animate-pulse-glow px-2 py-1 bg-cyan-500/10 rounded border border-cyan-500/20">
+              TOP &rarr;
+            </div>
+        `;
+
+        if (items.length === 0) {
+          html += `<div class="text-slate-600 text-xs font-mono my-auto">Pila Vacía</div>`;
+        } else {
+          // Render from top item to bottom item
+          for (let i = items.length - 1; i >= 0; i--) {
+            const isTop = i === items.length - 1;
+            const isHL = i === highlightIndex;
+            const isPeek = i === peekIndex;
+            
+            let bgClass = "bg-slate-800 border-slate-700 text-slate-200";
+            if (isHL) bgClass = "bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold scale-105 shadow-lg shadow-cyan-500/20";
+            if (isPeek) bgClass = "bg-amber-500/20 border-amber-400 text-amber-300 font-bold scale-105 shadow-lg shadow-amber-500/20";
+
+            html += `
+              <div class="data-item w-full py-2.5 rounded-lg border text-center font-mono text-sm relative transition-all ${bgClass}">
+                <span>${items[i]}</span>
+                ${isTop ? `<span class="absolute right-3 top-2.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">TOP [${i}]</span>` : `<span class="absolute right-3 top-2.5 text-[10px] text-slate-500">[${i}]</span>`}
+              </div>
+            `;
+          }
+        }
+
+        html += `</div>`;
+        canvas.innerHTML = html;
+      }
+
+      // QUEUE CANVAS (Horizontal Track)
+      renderQueueCanvas(highlightIndex = -1, peekIndex = -1) {
+        const items = this.state.queue;
+        const canvas = this.dom.visualizerCanvas;
+
+        let html = `
+          <div class="w-full flex flex-col items-center gap-4">
+            <div class="flex items-center justify-between w-full text-xs font-mono text-slate-400 px-4">
+              <span class="text-indigo-400 font-bold">&larr; FRONT (Salida)</span>
+              <span class="text-purple-400 font-bold">REAR (Entrada) &rarr;</span>
+            </div>
+
+            <div class="flex items-center gap-3 overflow-x-auto w-full p-4 border-2 border-dashed border-slate-800 rounded-xl min-h-[100px] bg-slate-900/30 justify-start">
+        `;
+
+        if (items.length === 0) {
+          html += `<div class="text-slate-600 text-xs font-mono mx-auto">Cola Vacía</div>`;
+        } else {
+          items.forEach((val, i) => {
+            const isFront = i === 0;
+            const isRear = i === items.length - 1;
+            const isHL = i === highlightIndex;
+            const isPeek = i === peekIndex;
+
+            let bgClass = "bg-slate-800 border-slate-700 text-slate-200";
+            if (isHL) bgClass = "bg-indigo-500/30 border-indigo-400 text-indigo-300 font-bold scale-105 shadow-lg shadow-indigo-500/20";
+            if (isPeek) bgClass = "bg-amber-500/30 border-amber-400 text-amber-300 font-bold scale-105 shadow-lg shadow-amber-500/20";
+
+            html += `
+              <div class="data-item flex-shrink-0 w-20 h-20 rounded-xl border flex flex-col items-center justify-center relative font-mono text-sm transition-all ${bgClass}">
+                <span class="text-base font-bold">${val}</span>
+                <span class="text-[9px] text-slate-500 mt-1">Idx: ${i}</span>
+                ${isFront ? `<span class="absolute -top-3 bg-indigo-500 text-slate-950 text-[9px] font-bold px-1.5 py-0.2 rounded-full">FRONT</span>` : ''}
+                ${isRear ? `<span class="absolute -bottom-3 bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">REAR</span>` : ''}
+              </div>
+            `;
+          });
+        }
+
+        html += `
+            </div>
+          </div>
+        `;
+        canvas.innerHTML = html;
+      }
+
+      // LINKED LIST CANVAS (Nodes with arrows)
+      renderLinkedListCanvas(activeIndex = -1) {
+        const items = this.state.linkedlist;
+        const canvas = this.dom.visualizerCanvas;
+
+        let html = `
+          <div class="flex items-center gap-2 overflow-x-auto w-full py-6 px-2 justify-start">
+        `;
+
+        if (items.length === 0) {
+          html += `<div class="text-slate-600 text-xs font-mono mx-auto">Lista Vacía (HEAD = NULL)</div>`;
+        } else {
+          items.forEach((val, i) => {
+            const isHead = i === 0;
+            const isHL = i === activeIndex;
+
+            let nodeStyle = "bg-slate-900 border-slate-700 text-slate-200";
+            if (isHL) nodeStyle = "bg-emerald-950 border-emerald-400 text-emerald-300 scale-105 shadow-lg shadow-emerald-500/20";
+
+            html += `
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- Node Card -->
+                <div class="data-item border rounded-xl flex overflow-hidden ${nodeStyle} shadow-md relative">
+                  ${isHead ? `<span class="absolute -top-5 left-1 text-[10px] font-bold text-emerald-400">HEAD</span>` : ''}
+                  <div class="px-3 py-3 border-r border-slate-800 flex flex-col items-center">
+                    <span class="text-[9px] text-slate-500 uppercase">Val</span>
+                    <span class="font-mono text-sm font-bold">${val}</span>
+                  </div>
+                  <div class="px-2.5 py-3 bg-slate-950/60 flex flex-col items-center justify-center">
+                    <span class="text-[9px] text-slate-500 uppercase">Next</span>
+                    <span class="text-xs text-emerald-400 font-mono">&rarr;</span>
+                  </div>
+                </div>
+
+                <!-- Connector Arrow -->
+                ${i < items.length - 1 ? `
+                  <div class="text-slate-600 font-bold text-lg px-1">&rarr;</div>
+                ` : `
+                  <div class="flex items-center gap-1 text-slate-500 font-mono text-xs px-2">
+                    &rarr; <span class="bg-slate-800 px-2 py-1 rounded text-[10px] text-slate-400">NULL</span>
+                  </div>
+                `}
+              </div>
+            `;
+          });
+        }
+
+        html += `</div>`;
+        canvas.innerHTML = html;
+      }
+
+      // BINARY SEARCH TREE CANVAS (SVG)
+      renderBSTCanvas(activeNodeVal = null, visitedVals = []) {
+        const canvas = this.dom.visualizerCanvas;
+        const width = 600;
+        const height = 280;
+
+        let svgHtml = `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" class="w-full h-auto">`;
+
+        if (!this.state.bst) {
+          svgHtml += `<text x="${width/2}" y="${height/2}" fill="#64748b" font-size="12" text-anchor="middle">Árbol Vacío</text></svg>`;
+          canvas.innerHTML = svgHtml;
+          return;
+        }
+
+        // Calculate positions
+        const nodes = [];
+        const edges = [];
+
+        const traverse = (node, x, y, dx, level) => {
+          if (!node) return;
+          nodes.push({ val: node.val, x, y });
+
+          if (node.left) {
+            const childX = x - dx;
+            const childY = y + 55;
+            edges.push({ x1: x, y1: y, x2: childX, y2: childY });
+            traverse(node.left, childX, childY, dx * 0.5, level + 1);
+          }
+          if (node.right) {
+            const childX = x + dx;
+            const childY = y + 55;
+            edges.push({ x1: x, y1: y, x2: childX, y2: childY });
+            traverse(node.right, childX, childY, dx * 0.5, level + 1);
+          }
+        };
+
+        traverse(this.state.bst, width / 2, 35, width / 4, 1);
+
+        // Render Edges
+        edges.forEach(e => {
+          svgHtml += `<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#334155" stroke-width="2" />`;
+        });
+
+        // Render Nodes
+        nodes.forEach(n => {
+          const isActive = n.val === activeNodeVal;
+          const isVisited = visitedVals.includes(n.val);
+
+          let circleFill = "#0f172a";
+          let circleStroke = "#475569";
+          let textColor = "#f8fafc";
+
+          if (isVisited) {
+            circleFill = "#581c87";
+            circleStroke = "#a855f7";
+          }
+          if (isActive) {
+            circleFill = "#78350f";
+            circleStroke = "#f59e0b";
+            textColor = "#fbbf24";
+          }
+
+          svgHtml += `
+            <g class="svg-node">
+              <circle cx="${n.x}" cy="${n.y}" r="18" fill="${circleFill}" stroke="${circleStroke}" stroke-width="2.5" class="${isActive ? 'node-active' : ''}" />
+              <text x="${n.x}" y="${n.y + 4}" fill="${textColor}" font-size="11" font-weight="bold" font-family="JetBrains Mono" text-anchor="middle">${n.val}</text>
+            </g>
+          `;
+        });
+
+        svgHtml += `</svg>`;
+        canvas.innerHTML = svgHtml;
+      }
+
+      // GRAPH CANVAS (SVG Network)
+      renderGraphCanvas(activeNode = null, visitedNodes = []) {
+        const canvas = this.dom.visualizerCanvas;
+        const width = 600;
+        const height = 280;
+
+        // Coordinates for fixed graph layout (A, B, C, D, E, F)
+        const coords = {
+          'A': { x: 100, y: 70 },
+          'B': { x: 280, y: 50 },
+          'C': { x: 200, y: 190 },
+          'D': { x: 450, y: 70 },
+          'E': { x: 380, y: 210 },
+          'F': { x: 530, y: 180 }
+        };
+
+        let svgHtml = `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" class="w-full h-auto">`;
+
+        // Render Edges
+        this.state.graph.edges.forEach(([u, v]) => {
+          const p1 = coords[u];
+          const p2 = coords[v];
+          if (p1 && p2) {
+            svgHtml += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#334155" stroke-width="2" />`;
+          }
+        });
+
+        // Render Nodes
+        this.state.graph.nodes.forEach(node => {
+          const pos = coords[node];
+          const isActive = node === activeNode;
+          const isVisited = visitedNodes.includes(node);
+
+          let circleFill = "#0f172a";
+          let circleStroke = "#475569";
+          let textColor = "#f8fafc";
+
+          if (isVisited) {
+            circleFill = "#312e81";
+            circleStroke = "#6366f1";
+          }
+          if (isActive) {
+            circleFill = "#78350f";
+            circleStroke = "#f59e0b";
+            textColor = "#fbbf24";
+          }
+
+          svgHtml += `
+            <g class="svg-node">
+              <circle cx="${pos.x}" cy="${pos.y}" r="20" fill="${circleFill}" stroke="${circleStroke}" stroke-width="2.5" class="${isActive ? 'node-active' : ''}" />
+              <text x="${pos.x}" y="${pos.y + 5}" fill="${textColor}" font-size="12" font-weight="bold" font-family="JetBrains Mono" text-anchor="middle">${node}</text>
+            </g>
+          `;
+        });
+
+        svgHtml += `</svg>`;
+        canvas.innerHTML = svgHtml;
+      }
+
+
+      /* ----------------------------------------------------
+       *  STEP-BY-STEP ANIMATION ENGINE
+       * ---------------------------------------------------- */
+      loadAnimationSteps(steps, codeLines) {
+        this.pause();
+        this.steps = steps;
+        this.currentStepIndex = -1;
+        this.currentCodeLines = codeLines;
+
+        this.dom.actionStatusBadge.innerText = "En Ejecución";
+        this.dom.actionStatusBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-mono border border-cyan-500/30";
+
+        this.stepNext();
+      }
+
+      play() {
+        if (this.isPlaying) return;
+        if (this.currentStepIndex >= this.steps.length - 1) {
+          this.currentStepIndex = -1; // Loop back
+        }
+        
+        this.isPlaying = true;
+        this.dom.iconPlay.classList.add('hidden');
+        this.dom.iconPause.classList.remove('hidden');
+        this.dom.labelPlayPause.innerText = 'Pausa';
+
+        this.timer = setInterval(() => {
+          if (!this.stepNext()) {
+            this.pause();
+          }
+        }, this.speed);
+      }
+
+      pause() {
+        this.isPlaying = false;
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
+
+        this.dom.iconPlay.classList.remove('hidden');
+        this.dom.iconPause.classList.add('hidden');
+        this.dom.labelPlayPause.innerText = 'Reproducir';
+      }
+
+      togglePlayPause() {
+        if (this.isPlaying) this.pause();
+        else this.play();
+      }
+
+      stepNext() {
+        if (this.currentStepIndex < this.steps.length - 1) {
+          this.currentStepIndex++;
+          this.executeStep(this.steps[this.currentStepIndex]);
+          return true;
+        } else {
+          this.dom.actionStatusBadge.innerText = "Completado";
+          this.dom.actionStatusBadge.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30";
+          return false;
+        }
+      }
+
+      stepPrev() {
+        if (this.currentStepIndex > 0) {
+          this.currentStepIndex--;
+          this.executeStep(this.steps[this.currentStepIndex]);
+        }
+      }
+
+      resetAnimation() {
+        this.pause();
+        this.renderCurrentDS();
+      }
+
+      executeStep(step) {
+        // 1. Update status explanation
+        this.dom.explanationText.innerText = step.msg;
+
+        // 2. Highlight code line
+        if (this.currentCodeLines) {
+          this.renderCodeSnippet(this.currentCodeLines, step.line);
+        }
+
+        // 3. Trigger canvas visual update
+        if (step.render) {
+          step.render();
+        }
+      }
+
+
+      /* ----------------------------------------------------
+       *  DATA STRUCTURE ACTIONS & STEP GENERATORS
+       * ---------------------------------------------------- */
+
+      // === STACK ACTIONS ===
+      actionStackPush() {
+        const valInput = document.getElementById('input-val');
+        const val = parseInt(valInput.value) || Math.floor(Math.random()*89)+10;
+
+        if (this.state.stack.length >= 6) {
+          alert('Límite de Pila alcanzado (Stack Overflow simulación)');
+          return;
+        }
+
+        const codeLines = [
+          { line: 1, code: `function push(pila, valor = ${val}) {` },
+          { line: 2, code: `  if (pila.length >= CAPACIDAD_MAX) return;` },
+          { line: 3, code: `  pila.push(${val}); // Insertar en Cima` },
+          { line: 4, code: `  top = pila.length - 1;` },
+          { line: 5, code: `  return pila;` },
+          { line: 6, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Iniciando operación Push con el valor ${val}.`,
+            render: () => this.renderStackCanvas()
+          },
+          {
+            line: 2,
+            msg: `Verificando capacidad de la pila (${this.state.stack.length}/6 elementos ocupados).`,
+            render: () => this.renderStackCanvas()
+          },
+          {
+            line: 3,
+            msg: `Insertando elemento ${val} en la cima de la Pila (LIFO).`,
+            render: () => {
+              this.state.stack.push(val);
+              this.renderStackCanvas(this.state.stack.length - 1);
+            }
+          },
+          {
+            line: 4,
+            msg: `Puntero TOP actualizado a la nueva posición [${this.state.stack.length - 1}].`,
+            render: () => this.renderStackCanvas(this.state.stack.length - 1)
+          },
+          {
+            line: 5,
+            msg: `Push completado exitosamente. Elemento ${val} está en la cima.`,
+            render: () => this.renderStackCanvas()
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionStackPop() {
+        if (this.state.stack.length === 0) {
+          alert('La pila está vacía (Stack Underflow)');
+          return;
+        }
+
+        const topVal = this.state.stack[this.state.stack.length - 1];
+
+        const codeLines = [
+          { line: 1, code: `function pop(pila) {` },
+          { line: 2, code: `  if (pila.length === 0) throw "Underflow";` },
+          { line: 3, code: `  const valorEliminado = pila[top];` },
+          { line: 4, code: `  pila.pop(); // Eliminar de Cima` },
+          { line: 5, code: `  return valorEliminado;` },
+          { line: 6, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Iniciando operación Pop para retirar el elemento superior.`,
+            render: () => this.renderStackCanvas(this.state.stack.length - 1)
+          },
+          {
+            line: 3,
+            msg: `Elemento en la cima es ${topVal}.`,
+            render: () => this.renderStackCanvas(this.state.stack.length - 1)
+          },
+          {
+            line: 4,
+            msg: `Removiendo el elemento ${topVal} de la Pila.`,
+            render: () => {
+              this.state.stack.pop();
+              this.renderStackCanvas();
+            }
+          },
+          {
+            line: 5,
+            msg: `Pop completado. Se retornó el valor ${topVal}.`,
+            render: () => this.renderStackCanvas()
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionStackPeek() {
+        if (this.state.stack.length === 0) return;
+        const topIdx = this.state.stack.length - 1;
+        const topVal = this.state.stack[topIdx];
+
+        const codeLines = [
+          { line: 1, code: `function peek(pila) {` },
+          { line: 2, code: `  if (pila.length === 0) return null;` },
+          { line: 3, code: `  return pila[pila.length - 1];` },
+          { line: 4, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Consultando el elemento TOP sin eliminarlo.`,
+            render: () => this.renderStackCanvas()
+          },
+          {
+            line: 3,
+            msg: `El elemento en la Cima (TOP) es: ${topVal}.`,
+            render: () => this.renderStackCanvas(-1, topIdx)
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      // === QUEUE ACTIONS ===
+      actionQueueEnqueue() {
+        const valInput = document.getElementById('input-val');
+        const val = parseInt(valInput.value) || Math.floor(Math.random()*89)+10;
+
+        if (this.state.queue.length >= 7) {
+          alert('Cola Llena');
+          return;
+        }
+
+        const codeLines = [
+          { line: 1, code: `function enqueue(cola, valor = ${val}) {` },
+          { line: 2, code: `  if (cola.length >= MAX) return "Lleno";` },
+          { line: 3, code: `  cola.push(${val}); // Insertar en REAR` },
+          { line: 4, code: `  rear = cola.length - 1;` },
+          { line: 5, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Encolando elemento ${val} por el final (REAR).`,
+            render: () => this.renderQueueCanvas()
+          },
+          {
+            line: 3,
+            msg: `Añadiendo ${val} al final de la fila de la cola.`,
+            render: () => {
+              this.state.queue.push(val);
+              this.renderQueueCanvas(this.state.queue.length - 1);
+            }
+          },
+          {
+            line: 4,
+            msg: `Puntero REAR actualizado a la posición [${this.state.queue.length - 1}].`,
+            render: () => this.renderQueueCanvas()
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionQueueDequeue() {
+        if (this.state.queue.length === 0) return;
+        const frontVal = this.state.queue[0];
+
+        const codeLines = [
+          { line: 1, code: `function dequeue(cola) {` },
+          { line: 2, code: `  if (cola.length === 0) return null;` },
+          { line: 3, code: `  const elementoAtendido = cola.shift();` },
+          { line: 4, code: `  return elementoAtendido;` },
+          { line: 5, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Desencolando el elemento en el frente (FRONT).`,
+            render: () => this.renderQueueCanvas(0)
+          },
+          {
+            line: 3,
+            msg: `Atendiendo y removiendo elemento ${frontVal} del FRONT (FIFO).`,
+            render: () => {
+              this.state.queue.shift();
+              this.renderQueueCanvas();
+            }
+          },
+          {
+            line: 4,
+            msg: `Los demás elementos avanzan un lugar en la cola.`,
+            render: () => this.renderQueueCanvas()
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionQueuePeek() {
+        if (this.state.queue.length === 0) return;
+        const frontVal = this.state.queue[0];
+
+        const codeLines = [
+          { line: 1, code: `function peek(cola) {` },
+          { line: 2, code: `  return cola[0]; // Elemento FRONT` },
+          { line: 3, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Consultando elemento en el Frente (FRONT).`,
+            render: () => this.renderQueueCanvas()
+          },
+          {
+            line: 2,
+            msg: `El primer elemento en la cola es: ${frontVal}.`,
+            render: () => this.renderQueueCanvas(-1, 0)
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      // === LINKED LIST ACTIONS ===
+      actionLLInsertHead() {
+        const valInput = document.getElementById('input-val');
+        const val = parseInt(valInput.value) || Math.floor(Math.random()*89)+10;
+
+        const codeLines = [
+          { line: 1, code: `function insertarInicio(valor = ${val}) {` },
+          { line: 2, code: `  const nuevoNodo = { valor: ${val}, next: null };` },
+          { line: 3, code: `  nuevoNodo.next = cabeza;` },
+          { line: 4, code: `  cabeza = nuevoNodo;` },
+          { line: 5, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 2,
+            msg: `Creando nuevo nodo con valor ${val}.`,
+            render: () => this.renderLinkedListCanvas()
+          },
+          {
+            line: 3,
+            msg: `Apuntando el puntero 'next' del nuevo nodo a la cabeza actual.`,
+            render: () => this.renderLinkedListCanvas()
+          },
+          {
+            line: 4,
+            msg: `Actualizando puntero HEAD al nuevo nodo.`,
+            render: () => {
+              this.state.linkedlist.unshift(val);
+              this.renderLinkedListCanvas(0);
+            }
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionLLSearch() {
+        const valInput = document.getElementById('input-val');
+        const target = parseInt(valInput.value) || 20;
+
+        const codeLines = [
+          { line: 1, code: `function buscar(valorTarget = ${target}) {` },
+          { line: 2, code: `  let actual = cabeza;` },
+          { line: 3, code: `  while (actual !== null) {` },
+          { line: 4, code: `    if (actual.valor === target) return true;` },
+          { line: 5, code: `    actual = actual.next;` },
+          { line: 6, code: `  }` },
+          { line: 7, code: `  return false;` },
+          { line: 8, code: `}` }
+        ];
+
+        const steps = [];
+        let found = false;
+
+        steps.push({
+          line: 2,
+          msg: `Iniciando búsqueda iterativa del valor ${target} desde HEAD.`,
+          render: () => this.renderLinkedListCanvas()
+        });
+
+        for (let i = 0; i < this.state.linkedlist.length; i++) {
+          const val = this.state.linkedlist[i];
+          steps.push({
+            line: 4,
+            msg: `Comparando nodo index [${i}] (Valor: ${val}) con ${target}.`,
+            render: () => this.renderLinkedListCanvas(i)
+          });
+
+          if (val === target) {
+            found = true;
+            steps.push({
+              line: 4,
+              msg: `¡Valor ${target} ENCONTRADO en el nodo [${i}]!`,
+              render: () => this.renderLinkedListCanvas(i)
+            });
+            break;
+          }
+
+          steps.push({
+            line: 5,
+            msg: `Avanzando al siguiente nodo mediante puntero 'next'.`,
+            render: () => this.renderLinkedListCanvas(i)
+          });
+        }
+
+        if (!found) {
+          steps.push({
+            line: 7,
+            msg: `Se llegó a NULL. El valor ${target} NO existe en la lista.`,
+            render: () => this.renderLinkedListCanvas(-1)
+          });
+        }
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionLLDelete() {
+        if (this.state.linkedlist.length === 0) return;
+
+        const codeLines = [
+          { line: 1, code: `function eliminarCabeza() {` },
+          { line: 2, code: `  if (cabeza === null) return;` },
+          { line: 3, code: `  cabeza = cabeza.next; // Desconectar primer nodo` },
+          { line: 4, code: `}` }
+        ];
+
+        const steps = [
+          {
+            line: 1,
+            msg: `Ubicando el nodo HEAD actual (${this.state.linkedlist[0]}).`,
+            render: () => this.renderLinkedListCanvas(0)
+          },
+          {
+            line: 3,
+            msg: `Moviendo el puntero HEAD al nodo siguiente.`,
+            render: () => {
+              this.state.linkedlist.shift();
+              this.renderLinkedListCanvas(0);
+            }
+          }
+        ];
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      // === BST ACTIONS ===
+      actionBSTInsert() {
+        const valInput = document.getElementById('input-val');
+        const val = parseInt(valInput.value) || 35;
+
+        const codeLines = [
+          { line: 1, code: `function insertar(nodo, valor = ${val}) {` },
+          { line: 2, code: `  if (nodo === null) return new Nodo(${val});` },
+          { line: 3, code: `  if (valor < nodo.valor)` },
+          { line: 4, code: `    nodo.izq = insertar(nodo.izq, valor);` },
+          { line: 5, code: `  else if (valor > nodo.valor)` },
+          { line: 6, code: `    nodo.der = insertar(nodo.der, valor);` },
+          { line: 7, code: `}` }
+        ];
+
+        const steps = [];
+        const visited = [];
+
+        const insertHelper = (curr) => {
+          if (!curr) return;
+          visited.push(curr.val);
+          
+          steps.push({
+            line: 3,
+            msg: `Comparando valor a insertar (${val}) con nodo actual (${curr.val}).`,
+            render: () => this.renderBSTCanvas(curr.val, [...visited])
+          });
+
+          if (val < curr.val) {
+            if (curr.left) {
+              insertHelper(curr.left);
+            } else {
+              curr.left = { val: val, left: null, right: null };
+              steps.push({
+                line: 4,
+                msg: `Insertando nodo ${val} a la IZQUIERDA de ${curr.val}.`,
+                render: () => this.renderBSTCanvas(val, [...visited, val])
+              });
+            }
+          } else if (val > curr.val) {
+            if (curr.right) {
+              insertHelper(curr.right);
+            } else {
+              curr.right = { val: val, left: null, right: null };
+              steps.push({
+                line: 6,
+                msg: `Insertando nodo ${val} a la DERECHA de ${curr.val}.`,
+                render: () => this.renderBSTCanvas(val, [...visited, val])
+              });
+            }
+          } else {
+            steps.push({
+              line: 1,
+              msg: `El valor ${val} ya existe en el BST. No se permiten duplicados.`,
+              render: () => this.renderBSTCanvas(curr.val, [...visited])
+            });
+          }
+        };
+
+        insertHelper(this.state.bst);
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionBSTSearch() {
+        const valInput = document.getElementById('input-val');
+        const target = parseInt(valInput.value) || 60;
+
+        const codeLines = [
+          { line: 1, code: `function buscar(nodo, valor = ${target}) {` },
+          { line: 2, code: `  if (nodo === null) return false;` },
+          { line: 3, code: `  if (nodo.valor === valor) return true;` },
+          { line: 4, code: `  if (valor < nodo.valor) return buscar(nodo.izq, valor);` },
+          { line: 5, code: `  else return buscar(nodo.der, valor);` },
+          { line: 6, code: `}` }
+        ];
+
+        const steps = [];
+        const visited = [];
+        let found = false;
+
+        let curr = this.state.bst;
+        while (curr) {
+          visited.push(curr.val);
+          steps.push({
+            line: 3,
+            msg: `Visitando nodo ${curr.val}. ¿Es igual a ${target}?`,
+            render: () => this.renderBSTCanvas(curr.val, [...visited])
+          });
+
+          if (curr.val === target) {
+            found = true;
+            steps.push({
+              line: 3,
+              msg: `¡Nodo ${target} ENCONTRADO en el árbol BST!`,
+              render: () => this.renderBSTCanvas(curr.val, [...visited])
+            });
+            break;
+          } else if (target < curr.val) {
+            steps.push({
+              line: 4,
+              msg: `${target} < ${curr.val}. Descendiendo por el subárbol IZQUIERDO.`,
+              render: () => this.renderBSTCanvas(curr.val, [...visited])
+            });
+            curr = curr.left;
+          } else {
+            steps.push({
+              line: 5,
+              msg: `${target} > ${curr.val}. Descendiendo por el subárbol DERECHO.`,
+              render: () => this.renderBSTCanvas(curr.val, [...visited])
+            });
+            curr = curr.right;
+          }
+        }
+
+        if (!found) {
+          steps.push({
+            line: 2,
+            msg: `Se alcanzó una hoja NULL. El valor ${target} NO está en el árbol.`,
+            render: () => this.renderBSTCanvas(null, [...visited])
+          });
+        }
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionBSTTraversal(type) {
+        const steps = [];
+        const visited = [];
+
+        const codeLines = [
+          { line: 1, code: `function ${type}(nodo) {` },
+          { line: 2, code: `  if (nodo === null) return;` },
+          { line: 3, code: `  // Recorrido de árbol ${type.toUpperCase()}` },
+          { line: 4, code: `}` }
+        ];
+
+        const inorder = (n) => {
+          if (!n) return;
+          inorder(n.left);
+          visited.push(n.val);
+          steps.push({
+            line: 3,
+            msg: `Recorrido Inorden: Visitando nodo ${n.val}. Orden actual: [${visited.join(', ')}]`,
+            render: () => this.renderBSTCanvas(n.val, [...visited])
+          });
+          inorder(n.right);
+        };
+
+        const preorder = (n) => {
+          if (!n) return;
+          visited.push(n.val);
+          steps.push({
+            line: 3,
+            msg: `Recorrido Preorden: Visitando nodo ${n.val}. Orden actual: [${visited.join(', ')}]`,
+            render: () => this.renderBSTCanvas(n.val, [...visited])
+          });
+          preorder(n.left);
+          preorder(n.right);
+        };
+
+        const postorder = (n) => {
+          if (!n) return;
+          postorder(n.left);
+          postorder(n.right);
+          visited.push(n.val);
+          steps.push({
+            line: 3,
+            msg: `Recorrido Postorden: Visitando nodo ${n.val}. Orden actual: [${visited.join(', ')}]`,
+            render: () => this.renderBSTCanvas(n.val, [...visited])
+          });
+        };
+
+        if (type === 'inorder') inorder(this.state.bst);
+        else if (type === 'preorder') preorder(this.state.bst);
+        else if (type === 'postorder') postorder(this.state.bst);
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      // === GRAPH ACTIONS ===
+      actionGraphBFS() {
+        const startSelect = document.getElementById('select-graph-start');
+        const start = startSelect ? startSelect.value : 'A';
+
+        const codeLines = [
+          { line: 1, code: `function bfs(inicio = "${start}") {` },
+          { line: 2, code: `  const cola = [inicio];` },
+          { line: 3, code: `  const visitados = new Set([inicio]);` },
+          { line: 4, code: `  while (cola.length > 0) {` },
+          { line: 5, code: `    const actual = cola.shift();` },
+          { line: 6, code: `    for (let vecino of adj[actual]) {` },
+          { line: 7, code: `      if (!visitados.has(vecino)) {` },
+          { line: 8, code: `        visitados.add(vecino); cola.push(vecino);` },
+          { line: 9, code: `      }` },
+          { line: 10, code: `    }` },
+          { line: 11, code: `  }` },
+          { line: 12, code: `}` }
+        ];
+
+        // Build Adjacency list
+        const adj = {};
+        this.state.graph.nodes.forEach(n => adj[n] = []);
+        this.state.graph.edges.forEach(([u, v]) => {
+          adj[u].push(v);
+          adj[v].push(u);
+        });
+
+        const queue = [start];
+        const visited = [start];
+        const steps = [];
+
+        steps.push({
+          line: 2,
+          msg: `Iniciando BFS desde el nodo ${start}. Encolando ${start}.`,
+          render: () => this.renderGraphCanvas(start, [...visited])
+        });
+
+        while (queue.length > 0) {
+          const curr = queue.shift();
+
+          steps.push({
+            line: 5,
+            msg: `Procesando nodo ${curr} de la cola BFS.`,
+            render: () => this.renderGraphCanvas(curr, [...visited])
+          });
+
+          for (const neighbor of adj[curr]) {
+            if (!visited.includes(neighbor)) {
+              visited.push(neighbor);
+              queue.push(neighbor);
+
+              steps.push({
+                line: 8,
+                msg: `Descubriendo vecino no visitado '${neighbor}' desde '${curr}'. Encolando.`,
+                render: () => this.renderGraphCanvas(neighbor, [...visited])
+              });
+            }
+          }
+        }
+
+        steps.push({
+          line: 11,
+          msg: `Recorrido BFS completado. Todos los nodos alcanzables fueron visitados.`,
+          render: () => this.renderGraphCanvas(null, [...visited])
+        });
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+      actionGraphDFS() {
+        const startSelect = document.getElementById('select-graph-start');
+        const start = startSelect ? startSelect.value : 'A';
+
+        const codeLines = [
+          { line: 1, code: `function dfs(nodo = "${start}", visitados = new Set()) {` },
+          { line: 2, code: `  visitados.add(nodo);` },
+          { line: 3, code: `  for (let vecino of adj[nodo]) {` },
+          { line: 4, code: `    if (!visitados.has(vecino)) {` },
+          { line: 5, code: `      dfs(vecino, visitados);` },
+          { line: 6, code: `    }` },
+          { line: 7, code: `  }` },
+          { line: 8, code: `}` }
+        ];
+
+        const adj = {};
+        this.state.graph.nodes.forEach(n => adj[n] = []);
+        this.state.graph.edges.forEach(([u, v]) => {
+          adj[u].push(v);
+          adj[v].push(u);
+        });
+
+        const visited = [];
+        const steps = [];
+
+        const dfsHelper = (curr) => {
+          visited.push(curr);
+          steps.push({
+            line: 2,
+            msg: `Explorando en profundidad nodo '${curr}'. Marcando como visitado.`,
+            render: () => this.renderGraphCanvas(curr, [...visited])
+          });
+
+          for (const neighbor of adj[curr]) {
+            if (!visited.includes(neighbor)) {
+              steps.push({
+                line: 4,
+                msg: `Avanzando recursivamente de '${curr}' -> '${neighbor}'.`,
+                render: () => this.renderGraphCanvas(neighbor, [...visited])
+              });
+              dfsHelper(neighbor);
+            }
+          }
+        };
+
+        dfsHelper(start);
+
+        steps.push({
+          line: 8,
+          msg: `Recorrido DFS por profundidad finalizado.`,
+          render: () => this.renderGraphCanvas(null, [...visited])
+        });
+
+        this.loadAnimationSteps(steps, codeLines);
+      }
+
+    }
+
+    // Global App Instance
+    let app;
+    window.addEventListener('DOMContentLoaded', () => {
+      app = new DataStructLab();
+    });
+  </script>
+</body>
+</html>
